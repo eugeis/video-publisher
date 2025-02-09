@@ -3,6 +3,8 @@ use indicatif::{ProgressBar, ProgressStyle};
 use std::thread;
 use std::time::Duration;
 use anyhow::Result;
+use reqwest::multipart::Form; // instead of reqwest::blocking::multipart::Form
+use reqwest::blocking::Client;
 
 pub fn download_video(url: &str, output: &str) -> Result<()> {
     let pb = ProgressBar::new_spinner();
