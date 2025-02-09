@@ -4,7 +4,6 @@ use rutube::upload_to_rutube;
 use telegram::upload_to_telegram;
 use vk::upload_to_vk;
 use anyhow::Result;
-use indicatif::{ProgressBar, ProgressStyle};
 
 mod youtube;
 mod rutube;

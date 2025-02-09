@@ -1,7 +1,5 @@
-use serde_json::json;
 use anyhow::Result;
-use std::path::Path;
-use reqwest::multipart::Form; // instead of reqwest::blocking::multipart::Form
+ // instead of reqwest::blocking::multipart::Form
 use reqwest::blocking::Client;
 
 pub fn upload_to_telegram(bot_token: &str, chat_id: &str, file_path: &str, caption: &str) -> Result<()> {

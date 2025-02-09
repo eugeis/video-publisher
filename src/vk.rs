@@ -1,7 +1,7 @@
 use serde_json::Value;
 use anyhow::{Result, anyhow};
 use std::fs::File;
-use std::io::{Read, Write};
+use std::io::Read;
 use reqwest::blocking::{Client, multipart::Form}; // Import blocking Client and multipart::Form
 
 pub fn upload_to_vk(access_token: &str, title: &str, description: &str, file_path: &str) -> Result<()> {

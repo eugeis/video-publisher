@@ -1,8 +1,7 @@
-use serde_json::json;
 use std::fs::File;
 use std::io::Read;
 use anyhow::Result;
-use reqwest::multipart::Form; // instead of reqwest::blocking::multipart::Form
+ // instead of reqwest::blocking::multipart::Form
 use reqwest::blocking::Client;
 
 pub fn upload_to_rutube(api_key: &str, file_path: &str, title: &str, description: &str) -> Result<()> {
