@@ -3,7 +3,7 @@ use youtube::download_video;
 use rutube::upload_to_rutube;
 use telegram::upload_to_telegram;
 use vk::upload_to_vk;
-use anyhow::Result;
+use anyhow::{Result, Context}; // Import Context from anyhow for better error handling
 
 mod youtube;
 mod rutube;
@@ -35,10 +35,19 @@ enum Commands {
         title: String,
         #[arg(short, long)]
         description: String,
+        #[arg(short, long)]
+        api_key: Option<String>,      // Optional access key for Rutube
+        #[arg(short, long)]
+        bot_token: Option<String>,    // Optional bot token for Telegram
+        #[arg(short, long)]
+        chat_id: Option<i64>,         // Optional chat ID for Telegram
+        #[arg(short, long)]
+        vk_access_token: Option<String>, // Optional access token for VK
     },
 }
 
-fn main() -> Result<()> {
+#[tokio::main] // This makes the main function asynchronous
+async fn main() -> Result<()> { // Use anyhow::Result
     let cli = Cli::parse();
 
     match cli.command {
@@ -47,19 +56,41 @@ fn main() -> Result<()> {
             println!("Saving to: {}", output);
             download_video(&url, &output)?;
         }
-        Commands::Upload { platform, file, title, description } => {
+        Commands::Upload {
+            platform,
+            file,
+            title,
+            description,
+            api_key,
+            bot_token,
+            chat_id,
+            vk_access_token,
+        } => {
             match platform.as_str() {
                 "rutube" => {
-                    println!("Uploading '{}' to Rutube", file);
-                    upload_to_rutube("your-api-key", &file, &title, &description)?;
+                    if let Some(key) = api_key {
+                        println!("Uploading '{}' to Rutube", file);
+                        upload_to_rutube(&key, &file, &title, &description)?;
+                    } else {
+                        println!("API key for Rutube is missing.");
+                    }
                 }
                 "telegram" => {
-                    println!("Uploading '{}' to Telegram", file);
-                    upload_to_telegram("your-bot-token", "your-chat-id", &file, &description)?;
+                    if let (Some(token), Some(id)) = (bot_token, chat_id) {
+                        println!("Uploading '{}' to Telegram", file);
+                        // Await the asynchronous upload function
+                        upload_to_telegram(&token, id, &file, &description).await.context("Failed to upload video to Telegram")?;
+                    } else {
+                        println!("Bot token or chat ID for Telegram is missing.");
+                    }
                 }
                 "vk" => {
-                    println!("Uploading '{}' to VK", file);
-                    upload_to_vk("your-vk-access-token", &title, &description, &file)?;
+                    if let Some(token) = vk_access_token {
+                        println!("Uploading '{}' to VK", file);
+                        upload_to_vk(&token, &title, &description, &file)?;
+                    } else {
+                        println!("VK access token is missing.");
+                    }
                 }
                 _ => println!("Unsupported platform: {}", platform),
             }
