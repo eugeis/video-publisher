@@ -10,6 +10,7 @@ pub fn download_video(url: &str, output: &str) -> Result<()> {
     pb.enable_steady_tick(Duration::from_millis(100));
 
     let status = Command::new("yt-dlp")
+        .arg("-k")
         .arg("-o")
         .arg(format!("{}/%(title)s.%(ext)s", output))
         .arg(url)
