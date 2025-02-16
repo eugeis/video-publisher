@@ -1,8 +1,7 @@
 use clap::{Parser, Subcommand};
 use youtube::download_video;
 use transform::transform_video;
-use anyhow::{Result, Context};
-use teloxide::requests::Requester;
+use anyhow::{Result};
 
 mod youtube;
 mod rutube;
@@ -11,6 +10,7 @@ mod vk;
 mod transform;
 mod bot;
 mod upload;
+mod process;
 
 #[derive(Parser)]
 #[command(name = "youtube-to-platforms")]
@@ -40,7 +40,7 @@ enum Commands {
         #[arg(short, long)]
         title: String,
         #[arg(short, long)]
-        api_key: Option<String>,
+        rutube_api_key: Option<String>,
         #[arg(long, default_value = "https://api.telegram.org/")]
         bot_api_url: String,
         #[arg(long, default_value = "50000000")]
@@ -60,7 +60,7 @@ enum Commands {
         #[arg(short, long, default_value = "./videos")]
         output: String,
         #[arg(short, long)]
-        api_key: Option<String>,
+        rutube_api_key: Option<String>,
         #[arg(long, default_value = "https://api.telegram.org/")]
         bot_api_url: String,
         #[arg(long, default_value = "50000000")]
@@ -80,7 +80,7 @@ enum Commands {
         #[arg(short, long, default_value = "./videos")]
         output: String,
         #[arg(short, long)]
-        api_key: Option<String>,
+        rutube_api_key: Option<String>,
         #[arg(long, default_value = "https://api.telegram.org/")]
         bot_api_url: String,
         #[arg(long, default_value = "50000000")]
@@ -110,58 +110,46 @@ async fn main() -> Result<()> { // Use anyhow::Result
             platform,
             file,
             title,
-            api_key,
+            rutube_api_key,
             bot_api_url,
             max_file_size,
             bot_token,
             chat_id,
             vk_access_token,
         } => {
-            upload::upload(platform, &file, &title, api_key, &bot_api_url, max_file_size,
-                   bot_token, chat_id, vk_access_token).await?;
+            upload::upload(&platform, &file, &title, rutube_api_key, &bot_api_url, max_file_size,
+                   bot_token, chat_id, vk_access_token, "", "").await?;
         }
         Commands::Process {
             url,
             platform,
             output,
-            api_key,
+            rutube_api_key,
             bot_api_url,
             max_file_size,
             bot_token,
             chat_id,
             vk_access_token,
         } => {
-            println!("Starting process: Download -> Transform -> Upload");
-
-            // Шаг 1: Загрузка видео
-            println!("Downloading from: {}", url);
-            let (downloaded_file, title) = download_video(&url, &output)?;
-            println!("Downloaded file: {:?}", downloaded_file);
-
-            // Шаг 2: Трансформация видео
-            println!("Transforming video: {}", downloaded_file);
-            let transformed_file = transform_video(&downloaded_file)?;
-            println!("Transformed video saved as: {}", transformed_file);
-
-            upload::upload(platform, &transformed_file, &title, api_key, &bot_api_url,
-                   max_file_size, bot_token, chat_id, vk_access_token).await?;
+            process::youtube(&url, &platform, &output, rutube_api_key, &bot_api_url,
+                            max_file_size, bot_token, chat_id, vk_access_token).await?;
         }
         Commands::Bot {
             bot_token,
             platform,
             output,
-            api_key,
+            rutube_api_key,
             bot_api_url,
             max_file_size,
             chat_id,
             vk_access_token,
         } => {
             println!("Starting Telegram bot...");
-            bot::run(bot_token,
-                     platform,
-                     output,
-                     api_key,
-                     bot_api_url,
+            bot::run(&bot_token,
+                     &platform,
+                     &output,
+                     rutube_api_key,
+                     &bot_api_url,
                      max_file_size,
                      chat_id,
                      vk_access_token).await?;
@@ -170,3 +158,4 @@ async fn main() -> Result<()> { // Use anyhow::Result
 
     Ok(())
 }
+

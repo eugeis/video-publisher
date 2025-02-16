@@ -48,7 +48,8 @@ async fn upload_large_video(
 }
 
 pub async fn upload_to_telegram(
-    bot_url: &str, max_file_size: u64, bot_token: &str, chat_id: i64, file_path: &str, caption: &str) -> Result<()> {
+    bot_url: &str, max_file_size: u64, bot_token: &str, chat_id: i64, file_path: &str,
+    caption: &str, message_before: &str, message_after: &str) -> Result<()> {
 
     let client = net::default_reqwest_settings()
         .timeout(std::time::Duration::from_secs(240)).build().expect("Client creation failed");
@@ -60,6 +61,10 @@ pub async fn upload_to_telegram(
     let file_size = metadata(file_path)
         .map(|m| m.len())
         .context("Failed to get file metadata")?;
+
+    if message_before != "" {
+        bot.send_message(ChatId(chat_id), message_before).send().await?;
+    }
 
     if file_size > max_file_size {
         // If the file is too large, use chunking
@@ -74,6 +79,10 @@ pub async fn upload_to_telegram(
             .send()  // Send the request asynchronously
             .await
             .context("Failed to upload video to Telegram")?;
+    }
+
+    if message_after != "" {
+        bot.send_message(ChatId(chat_id), message_after).send().await?;
     }
 
     println!("Video uploaded successfully!");

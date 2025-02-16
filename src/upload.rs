@@ -4,12 +4,13 @@ use crate::telegram::upload_to_telegram;
 use crate::vk::upload_to_vk;
 use anyhow::Result;
 
-pub(crate) async fn upload(platform: String, file: &String, title: &String, api_key: Option<String>,
-                           bot_api_url: &String, max_file_size: u64, bot_token: Option<String>,
-                           chat_id: Option<i64>, vk_access_token: Option<String>) -> Result<()> {
-    match platform.as_str() {
+pub(crate) async fn upload(platform: &str, file: &str, title: &str, rutube_api_key: Option<String>,
+                           bot_api_url: &str, max_file_size: u64, bot_token: Option<String>,
+                           chat_id: Option<i64>, vk_access_token: Option<String>,
+                           message_before: &str, message_after: &str) -> Result<()> {
+    match platform {
         "rutube" => {
-            if let Some(key) = api_key {
+            if let Some(key) = rutube_api_key {
                 println!("Uploading '{}' to Rutube", file);
                 upload_to_rutube(&key, &file, &title)?;
             } else {
@@ -21,7 +22,7 @@ pub(crate) async fn upload(platform: String, file: &String, title: &String, api_
                 println!("Uploading '{}' to Telegram", file);
                 // Await the asynchronous upload function
                 upload_to_telegram(
-                    &bot_api_url.as_str(), max_file_size, &token, id, &file, &title)
+                    &bot_api_url, max_file_size, &token, id, file, title, message_before, message_after)
                     .await.context("Failed to upload video to Telegram")?;
             } else {
                 println!("Bot token or chat ID for Telegram is missing.");
