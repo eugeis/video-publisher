@@ -4,7 +4,7 @@ use anyhow::Result;
  // instead of reqwest::blocking::multipart::Form
 use reqwest::blocking::Client;
 
-pub fn upload_to_rutube(api_key: &str, file_path: &str, title: &str, description: &str) -> Result<()> {
+pub fn upload_to_rutube(api_key: &str, file_path: &str, title: &str) -> Result<()> {
     let client = Client::new();
     
     let mut file = File::open(file_path)?;

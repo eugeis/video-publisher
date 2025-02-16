@@ -4,16 +4,18 @@ use teloxide::types::{ChatId, InputFile};
 use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncSeekExt, BufReader};
 use std::fs::metadata;
+use reqwest::Client;
+use teloxide::net;
 
-const CHUNK_SIZE: usize = 45 * 1024 * 1024; // 45MB per chunk (max for Telegram)
+async fn upload_large_video(
+    max_file_size: u64, bot: &Bot, chat_id: i64, video_path: &str) -> Result<()> {
 
-async fn upload_large_video(bot: &Bot, chat_id: i64, video_path: &str) -> Result<()> {
     let file_size = metadata(video_path)
         .map(|m| m.len())
         .context("Failed to get file metadata")?;
 
     let mut start = 0;
-    let mut end = CHUNK_SIZE;
+    let mut end = max_file_size;
 
     let file = File::open(video_path).await.context("Failed to open file")?;
     let mut reader = BufReader::new(file);
@@ -21,19 +23,19 @@ async fn upload_large_video(bot: &Bot, chat_id: i64, video_path: &str) -> Result
     let mut chunks: Vec<Vec<u8>> = Vec::new();
 
     // Loop through the file in chunks
-    while start < file_size as usize {
-        if end > file_size as usize {
-            end = file_size as usize; // Don't go beyond the file size
+    while start < file_size {
+        if end > file_size {
+            end = file_size;
         }
 
-        let mut chunk = vec![0u8; end - start];
+        let mut chunk = vec![0u8; (end - start) as usize];
         reader.seek(std::io::SeekFrom::Start(start as u64)).await.context("Failed to seek to the start position")?;
         reader.read_exact(&mut chunk).await.context("Failed to read the chunk")?;
 
         chunks.push(chunk);
 
         start = end;
-        end += CHUNK_SIZE;
+        end += max_file_size;
     }
 
     // Send the file in chunks
@@ -46,19 +48,23 @@ async fn upload_large_video(bot: &Bot, chat_id: i64, video_path: &str) -> Result
     Ok(())
 }
 
-pub async fn upload_to_telegram(bot_token: &str, chat_id: i64, file_path: &str, caption: &str) -> Result<()> {
-    let bot = Bot::new(bot_token);
+pub async fn upload_to_telegram(
+    bot_url: &str, max_file_size: u64, bot_token: &str, chat_id: i64, file_path: &str, caption: &str) -> Result<()> {
+
+    let client = net::default_reqwest_settings()
+        .timeout(std::time::Duration::from_secs(240)).build().expect("Client creation failed");
+
+    let bot = Bot::with_client(bot_token, client).set_api_url(bot_url.parse()?);
+
 
     // Check the file size before deciding the upload method
     let file_size = metadata(file_path)
         .map(|m| m.len())
         .context("Failed to get file metadata")?;
 
-    const MAX_FILE_SIZE: u64 = 45_000_000; // 50 MB limit for direct uploads
-
-    if file_size > MAX_FILE_SIZE {
+    if file_size > max_file_size {
         // If the file is too large, use chunking
-        upload_large_video(&bot, chat_id, file_path).await
+        upload_large_video(max_file_size, &bot, chat_id, file_path).await
             .context("Failed to upload video in chunks")?;
     } else {
         // Directly send the video if the file size is within the limit

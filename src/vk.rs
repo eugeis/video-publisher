@@ -4,7 +4,7 @@ use std::fs::File;
 use std::io::Read;
 use reqwest::blocking::{Client, multipart::Form}; // Import blocking Client and multipart::Form
 
-pub fn upload_to_vk(access_token: &str, title: &str, description: &str, file_path: &str) -> Result<()> {
+pub fn upload_to_vk(access_token: &str, title: &str, file_path: &str) -> Result<()> {
     let client = Client::new();
 
     // Step 1: Get upload URL
@@ -14,7 +14,6 @@ pub fn upload_to_vk(access_token: &str, title: &str, description: &str, file_pat
             ("access_token", access_token),
             ("v", "5.131"),
             ("name", title),
-            ("description", description),
         ])
         .send()?
         .json::<Value>()?;
