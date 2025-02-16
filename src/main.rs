@@ -2,6 +2,7 @@ use clap::{Parser, Subcommand};
 use youtube::download_video;
 use transform::transform_video;
 use anyhow::{Result};
+use std::str::FromStr;
 
 mod youtube;
 mod rutube;
@@ -89,11 +90,16 @@ enum Commands {
         chat_id: Option<i64>,
         #[arg(short, long)]
         vk_access_token: Option<String>,
+        #[arg(short, long)]
+        allowed_users: String,  // New argument for allowed user IDs (comma-separated)
     },
 }
 
-#[tokio::main] // This makes the main function asynchronous
-async fn main() -> Result<()> { // Use anyhow::Result
+impl Cli {
+}
+
+#[tokio::main]
+async fn main() -> Result<()> {
     let cli = Cli::parse();
 
     match cli.command {
@@ -118,7 +124,7 @@ async fn main() -> Result<()> { // Use anyhow::Result
             vk_access_token,
         } => {
             upload::upload(&platform, &file, &title, rutube_api_key, &bot_api_url, max_file_size,
-                   bot_token, chat_id, vk_access_token, "", "").await?;
+                           bot_token, chat_id, vk_access_token, "", "").await?;
         }
         Commands::Process {
             url,
@@ -132,7 +138,7 @@ async fn main() -> Result<()> { // Use anyhow::Result
             vk_access_token,
         } => {
             process::youtube(&url, &platform, &output, rutube_api_key, &bot_api_url,
-                            max_file_size, bot_token, chat_id, vk_access_token).await?;
+                             max_file_size, bot_token, chat_id, vk_access_token).await?;
         }
         Commands::Bot {
             bot_token,
@@ -143,8 +149,13 @@ async fn main() -> Result<()> { // Use anyhow::Result
             max_file_size,
             chat_id,
             vk_access_token,
+            allowed_users,
         } => {
-            println!("Starting Telegram bot...");
+            println!("Telegram bot...");
+            let allowed_users = allowed_users.split(',')
+                .filter_map(|s| u64::from_str(s.trim()).ok())
+                .collect();
+
             bot::run(&bot_token,
                      &platform,
                      &output,
@@ -152,10 +163,10 @@ async fn main() -> Result<()> { // Use anyhow::Result
                      &bot_api_url,
                      max_file_size,
                      chat_id,
-                     vk_access_token).await?;
+                     vk_access_token,
+                     allowed_users).await?;
         }
     }
 
     Ok(())
 }
-

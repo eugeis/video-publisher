@@ -26,6 +26,7 @@ struct BotConfig {
     bot_token: String,
     chat_id: Option<i64>,
     vk_access_token: Option<String>,
+    allowed_users: Vec<u64>,
 }
 
 pub(crate) async fn run(bot_token: &str,
@@ -35,7 +36,8 @@ pub(crate) async fn run(bot_token: &str,
                         bot_api_url: &str,
                         max_file_size: u64,
                         chat_id: Option<i64>,
-                        vk_access_token: Option<String>,) -> anyhow::Result<()> {
+                        vk_access_token: Option<String>,
+                        allowed_users: Vec<u64>,) -> anyhow::Result<()> {
     let client = net::default_reqwest_settings()
         .timeout(std::time::Duration::from_secs(240))
         .build()
@@ -52,10 +54,17 @@ pub(crate) async fn run(bot_token: &str,
         bot_token: bot_token.to_string(),
         chat_id,
         vk_access_token,
+        allowed_users
     });
 
     async fn handle_message(bot: Bot, msg: Message, config: Arc<BotConfig>) -> ResponseResult<()> {
         let youtube_regex = Regex::new(r"^(https?://)?(www\.)?(youtube\.com/(watch\?v=|shorts/)|youtu\.be/)[\w-]+").unwrap();
+
+        let user_id = msg.from().unwrap().id.0;  // Extract the u64 value from UserId
+        if !config.allowed_users.contains(&user_id) {
+            bot.send_message(msg.chat.id, "You are not authorized to use this bot.").await?;
+            return Ok(());
+        }
 
         if let Some(text) = msg.text() {
             // Check if the message is a command
