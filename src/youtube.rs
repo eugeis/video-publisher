@@ -51,14 +51,14 @@ pub fn get_video_metadata(url: &str, output: &str) -> Result<(String, String)> {
     let json: Value = serde_json::from_str(&json_str).map_err(|e| anyhow!("Failed to parse JSON: {}", e))?;
 
     // Получаем название и путь к файлу
-    let title = json["title"].as_str().unwrap_or("Unknown Title").to_string();
-    let mut filename = json["_filename"].as_str().unwrap_or("").to_string();
+    let mut title = json["title"].as_str().unwrap_or("Unknown Title").to_string();
+    let filename = json["_filename"].as_str().unwrap_or("").to_string();
 
     if filename.is_empty() {
         return Err(anyhow!("Failed to determine filename"));
     }
 
-    filename = filename.replace(" #shortvideo", "");
+    title = title.replace(" #shortvideo", "");
 
     Ok((filename, title))
 }

@@ -4,7 +4,6 @@ use teloxide::types::{ChatId, InputFile};
 use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncSeekExt, BufReader};
 use std::fs::metadata;
-use reqwest::Client;
 use teloxide::net;
 
 async fn upload_large_video(
