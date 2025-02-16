@@ -1,41 +1,41 @@
-use reqwest::blocking::{Client, Body};
-use indicatif::{ProgressBar, ProgressStyle};
-use std::fs::File;
-use std::io::{self, Read};
+use anyhow::Context;
+use crate::rutube::upload_to_rutube;
+use crate::telegram::upload_to_telegram;
+use crate::vk::upload_to_vk;
 use anyhow::Result;
 
-pub fn upload_with_progress(api_url: &str, file_path: &str, headers: Vec<(&str, &str)>) -> Result<()> {
-    let client = Client::new();
-    let mut file = File::open(file_path)?;
-    
-    let metadata = file.metadata()?;
-    let total_size = metadata.len();
-    
-    let pb = ProgressBar::new(total_size);
-    pb.set_style(ProgressStyle::default_bar()
-        .template("{wide_bar} {bytes}/{total_bytes} ({eta})")?
-        .progress_chars("=>-"));
-    
-    let mut buffer = Vec::new();
-    let mut uploaded_size = 0;
-    
-    while let Ok(n) = file.by_ref().take(8192).read_to_end(&mut buffer) {
-        if n == 0 { break; }
-        uploaded_size += n as u64;
-        pb.set_position(uploaded_size);
+pub(crate) async fn upload(platform: String, file: &String, title: &String, api_key: Option<String>,
+                           bot_api_url: &String, max_file_size: u64, bot_token: Option<String>,
+                           chat_id: Option<i64>, vk_access_token: Option<String>) -> Result<()> {
+    match platform.as_str() {
+        "rutube" => {
+            if let Some(key) = api_key {
+                println!("Uploading '{}' to Rutube", file);
+                upload_to_rutube(&key, &file, &title)?;
+            } else {
+                println!("API key for Rutube is missing.");
+            }
+        }
+        "telegram" => {
+            if let (Some(token), Some(id)) = (bot_token, chat_id) {
+                println!("Uploading '{}' to Telegram", file);
+                // Await the asynchronous upload function
+                upload_to_telegram(
+                    &bot_api_url.as_str(), max_file_size, &token, id, &file, &title)
+                    .await.context("Failed to upload video to Telegram")?;
+            } else {
+                println!("Bot token or chat ID for Telegram is missing.");
+            }
+        }
+        "vk" => {
+            if let Some(token) = vk_access_token {
+                println!("Uploading '{}' to VK", file);
+                upload_to_vk(&token, &title, &file)?;
+            } else {
+                println!("VK access token is missing.");
+            }
+        }
+        _ => println!("Unsupported platform: {}", platform),
     }
-    
-    let body = Body::from(buffer);
-    let mut req = client.post(api_url).body(body);
-    
-    for (key, value) in headers {
-        req = req.header(key, value);
-    }
-    
-    let res = req.send()?;
-    
-    pb.finish_with_message("Upload complete");
-    println!("Upload response: {:?}", res.text()?);
-    
     Ok(())
 }

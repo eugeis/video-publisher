@@ -1,16 +1,16 @@
 use clap::{Parser, Subcommand};
 use youtube::download_video;
-use rutube::upload_to_rutube;
-use telegram::upload_to_telegram;
-use vk::upload_to_vk;
 use transform::transform_video;
-use anyhow::{Result, Context}; // Import Context from anyhow for better error handling
+use anyhow::{Result, Context};
+use teloxide::requests::Requester;
 
 mod youtube;
 mod rutube;
 mod telegram;
 mod vk;
 mod transform;
+mod bot;
+mod upload;
 
 #[derive(Parser)]
 #[command(name = "youtube-to-platforms")]
@@ -72,6 +72,24 @@ enum Commands {
         #[arg(short, long)]
         vk_access_token: Option<String>,
     },
+    Bot {
+        #[arg(short, long)]
+        bot_token: String,
+        #[arg(short, long)]
+        platform: String,
+        #[arg(short, long, default_value = "./videos")]
+        output: String,
+        #[arg(short, long)]
+        api_key: Option<String>,
+        #[arg(long, default_value = "https://api.telegram.org/")]
+        bot_api_url: String,
+        #[arg(long, default_value = "50000000")]
+        max_file_size: u64,
+        #[arg(short, long)]
+        chat_id: Option<i64>,
+        #[arg(short, long)]
+        vk_access_token: Option<String>,
+    },
 }
 
 #[tokio::main] // This makes the main function asynchronous
@@ -99,7 +117,7 @@ async fn main() -> Result<()> { // Use anyhow::Result
             chat_id,
             vk_access_token,
         } => {
-            upload(platform, &file, &title, api_key, &bot_api_url, max_file_size,
+            upload::upload(platform, &file, &title, api_key, &bot_api_url, max_file_size,
                    bot_token, chat_id, vk_access_token).await?;
         }
         Commands::Process {
@@ -125,47 +143,30 @@ async fn main() -> Result<()> { // Use anyhow::Result
             let transformed_file = transform_video(&downloaded_file)?;
             println!("Transformed video saved as: {}", transformed_file);
 
-            upload(platform, &transformed_file, &title, api_key, &bot_api_url,
+            upload::upload(platform, &transformed_file, &title, api_key, &bot_api_url,
                    max_file_size, bot_token, chat_id, vk_access_token).await?;
         }
-        _ => {}
+        Commands::Bot {
+            bot_token,
+            platform,
+            output,
+            api_key,
+            bot_api_url,
+            max_file_size,
+            chat_id,
+            vk_access_token,
+        } => {
+            println!("Starting Telegram bot...");
+            bot::run(bot_token,
+                     platform,
+                     output,
+                     api_key,
+                     bot_api_url,
+                     max_file_size,
+                     chat_id,
+                     vk_access_token).await?;
+        }
     }
 
-    Ok(())
-}
-
-async fn upload(platform: String, file: &String, title: &String, api_key: Option<String>,
-                bot_api_url: &String, max_file_size: u64, bot_token: Option<String>,
-                chat_id: Option<i64>, vk_access_token: Option<String>) -> Result<()> {
-    match platform.as_str() {
-        "rutube" => {
-            if let Some(key) = api_key {
-                println!("Uploading '{}' to Rutube", file);
-                upload_to_rutube(&key, &file, &title)?;
-            } else {
-                println!("API key for Rutube is missing.");
-            }
-        }
-        "telegram" => {
-            if let (Some(token), Some(id)) = (bot_token, chat_id) {
-                println!("Uploading '{}' to Telegram", file);
-                // Await the asynchronous upload function
-                upload_to_telegram(
-                    &bot_api_url.as_str(), max_file_size, &token, id, &file, &title)
-                    .await.context("Failed to upload video to Telegram")?;
-            } else {
-                println!("Bot token or chat ID for Telegram is missing.");
-            }
-        }
-        "vk" => {
-            if let Some(token) = vk_access_token {
-                println!("Uploading '{}' to VK", file);
-                upload_to_vk(&token, &title, &file)?;
-            } else {
-                println!("VK access token is missing.");
-            }
-        }
-        _ => println!("Unsupported platform: {}", platform),
-    }
     Ok(())
 }
