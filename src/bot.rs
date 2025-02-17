@@ -58,9 +58,9 @@ pub(crate) async fn run(bot_token: &str,
     });
 
     async fn handle_message(bot: Bot, msg: Message, config: Arc<BotConfig>) -> ResponseResult<()> {
-        let youtube_regex = Regex::new(r"^(https?://)?(www\.)?(youtube\.com/(watch\?v=|shorts/)|youtu\.be/)[\w-]+").unwrap();
+        let youtube_regex = Regex::new(r"(https?://)?(www\.)?(youtube\.com/(watch\?v=|shorts/)|youtu\.be/)[\w-]+").unwrap();
 
-        let user_id = msg.from().unwrap().id.0;  // Extract the u64 value from UserId
+        let user_id = msg.from().unwrap().id.0; // Extract the u64 value from UserId
         if !config.allowed_users.contains(&user_id) {
             bot.send_message(msg.chat.id, "You are not authorized to use this bot.").await?;
             return Ok(());
@@ -78,12 +78,13 @@ pub(crate) async fn run(bot_token: &str,
                     }
                 }
             }
-            // Check if the text is a YouTube URL
-            else if youtube_regex.is_match(text) {
+            // Extract and process the YouTube URL
+            else if let Some(mat) = youtube_regex.find(text) {
+                let youtube_link = mat.as_str(); // Extract the matched YouTube link
                 bot.send_message(msg.chat.id, "Processing YouTube video...").await?;
                 let cfg = config.clone();
                 if let Err(e) = process::youtube(
-                    text,
+                    youtube_link, // Pass only the YouTube link
                     &cfg.platform,
                     &cfg.output,
                     cfg.rutube_api_key.clone(),
@@ -91,8 +92,10 @@ pub(crate) async fn run(bot_token: &str,
                     cfg.max_file_size,
                     Some(cfg.bot_token.clone()),
                     cfg.chat_id,
-                    cfg.vk_access_token.clone()
-                ).await {
+                    cfg.vk_access_token.clone(),
+                )
+                    .await
+                {
                     bot.send_message(msg.chat.id, format!("Error processing video: {}", e)).await?;
                 } else {
                     bot.send_message(msg.chat.id, "Video processed successfully!").await?;
