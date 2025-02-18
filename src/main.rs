@@ -60,6 +60,10 @@ enum Commands {
         platform: String,
         #[arg(short, long, default_value = "./videos")]
         output: String,
+        #[arg(long)]
+        delete_youtube: bool,
+        #[arg(long)]
+        delete_transformed: bool,
         #[arg(short, long)]
         rutube_api_key: Option<String>,
         #[arg(long, default_value = "https://api.telegram.org/")]
@@ -80,6 +84,10 @@ enum Commands {
         platform: String,
         #[arg(short, long, default_value = "./videos")]
         output: String,
+        #[arg(long)]
+        delete_youtube: bool,
+        #[arg(long)]
+        delete_transformed: bool,
         #[arg(short, long)]
         rutube_api_key: Option<String>,
         #[arg(long, default_value = "https://api.telegram.org/")]
@@ -91,7 +99,7 @@ enum Commands {
         #[arg(short, long)]
         vk_access_token: Option<String>,
         #[arg(short, long)]
-        allowed_users: String,  // New argument for allowed user IDs (comma-separated)
+        allowed_users: String,
     },
 }
 
@@ -130,6 +138,8 @@ async fn main() -> Result<()> {
             url,
             platform,
             output,
+            delete_youtube,
+            delete_transformed,
             rutube_api_key,
             bot_api_url,
             max_file_size,
@@ -137,13 +147,16 @@ async fn main() -> Result<()> {
             chat_id,
             vk_access_token,
         } => {
-            process::youtube(&url, &platform, &output, rutube_api_key, &bot_api_url,
+            process::youtube(&url, &platform, &output, delete_youtube, delete_transformed,
+                             rutube_api_key, &bot_api_url,
                              max_file_size, bot_token, chat_id, vk_access_token).await?;
         }
         Commands::Bot {
             bot_token,
             platform,
             output,
+            delete_youtube,
+            delete_transformed,
             rutube_api_key,
             bot_api_url,
             max_file_size,
@@ -159,6 +172,8 @@ async fn main() -> Result<()> {
             bot::run(&bot_token,
                      &platform,
                      &output,
+                     delete_youtube,
+                     delete_transformed,
                      rutube_api_key,
                      &bot_api_url,
                      max_file_size,
