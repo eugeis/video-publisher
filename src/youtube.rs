@@ -17,11 +17,15 @@ pub fn download_video(url: &str, output: &str) -> Result<(String, String)> {
         return Ok((filename, title));
     }
 
-    // Загружаем видео
     let status = Command::new("yt-dlp")
-        .arg("-o")
-        .arg(format!("{}/%(title)s.%(ext)s", output)) // Совпадает с `get_video_metadata`
-        .arg(url)
+        .args([
+            "-o",
+            &format!("{}/%(title)s.%(ext)s", output),
+            "-f", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]",
+            "--merge-output-format", "mp4",
+            "--recode-video", "mp4",
+            url,
+        ])
         .status()?;
 
     pb.finish_with_message("Download complete");
@@ -38,8 +42,10 @@ pub fn get_video_metadata(url: &str, output: &str) -> Result<(String, String)> {
     let output_data = Command::new("yt-dlp")
         .arg("--dump-json")
         .arg("-o")
-        .arg(format!("{}/%(title)s.%(ext)s", output)) // Добавляем кастомный формат!
+        .arg(format!("{}/%(title)s.%(ext)s", output))
         .arg(url)
+        .arg("-f")
+        .arg("bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]")
         .output()?;
 
     if !output_data.status.success() {

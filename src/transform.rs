@@ -6,19 +6,15 @@ pub(crate) fn transform_video(file: &str) -> Result<String> {
     let status = Command::new("ffmpeg")
         .args([
             "-i", file,
-            // Apply rotation and scale the video
-            "-vf", "transpose=1,scale=1280:-2",
+            "-vf", "scale=-2:720",
             "-c:v", "libx264",
-            "-preset", "slow",        // Better quality at a smaller size
-            "-crf", "23",             // Balance between quality and size
-            "-profile:v", "high",
-            "-level", "4.1",          // Maximum compatibility with Telegram
+            "-preset", "slow",
+            "-crf", "26",
+            "-level", "4.1",
             "-pix_fmt", "yuv420p",
-            "-c:a", "aac",            // AAC codec (more compatible)
-            "-b:a", "128k",           // Optimal bitrate for audio
-            "-movflags", "+faststart", // Speeds up playback start
-            // Remove rotation metadata
-            "-metadata:s:v:0", "rotate=0",
+            "-c:a", "aac",
+            "-b:a", "128k",
+            "-movflags", "+faststart",
             &output_file
         ])
         .status()

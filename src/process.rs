@@ -10,12 +10,10 @@ pub(crate) async fn youtube(
 
     println!("Starting process: Download -> Transform -> Upload");
 
-    // Шаг 1: Загрузка видео
     println!("Downloading from: {}", url);
     let (downloaded_file, title) = download_video(&url, &output)?;
     println!("Downloaded file: {:?}", downloaded_file);
 
-    // Шаг 2: Трансформация видео
     println!("Transforming video: {}", downloaded_file);
     let transformed_file = transform_video(&downloaded_file)?;
     println!("Transformed video saved as: {}", transformed_file);
