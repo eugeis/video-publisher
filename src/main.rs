@@ -12,6 +12,7 @@ mod transform;
 mod bot;
 mod upload;
 mod process;
+mod insta;
 
 #[derive(Parser)]
 #[command(name = "youtube-to-platforms")]
@@ -52,6 +53,10 @@ enum Commands {
         chat_id: Option<i64>,
         #[arg(short, long)]
         vk_access_token: Option<String>,
+        #[arg(short, long)]
+        instagram_username: Option<String>,
+        #[arg(short, long)]
+        instagram_password: Option<String>,
     },
     Process {
         #[arg(short, long)]
@@ -130,9 +135,12 @@ async fn main() -> Result<()> {
             bot_token,
             chat_id,
             vk_access_token,
+            instagram_username,
+            instagram_password,
         } => {
             upload::upload(&platform, &file, &title, rutube_api_key, &bot_api_url, max_file_size,
-                           bot_token, chat_id, vk_access_token, "", "").await?;
+                           bot_token, chat_id, vk_access_token,
+                           instagram_username, instagram_password, "", "").await?;
         }
         Commands::Process {
             url,
