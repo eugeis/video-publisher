@@ -3,6 +3,7 @@ use youtube::download_video;
 use transform::transform_video;
 use anyhow::{Result};
 use std::str::FromStr;
+use crate::transform::EncodingPasses;
 
 mod youtube;
 mod rutube;
@@ -117,7 +118,7 @@ async fn main() -> Result<()> {
             download_video(&url, &output)?;
         }
         Commands::Transform { file } => {
-            let transformed_file = transform_video(&file)?;
+            let transformed_file = transform_video(&file, EncodingPasses::TwoPass)?;
             println!("Transformed video saved as: {}", transformed_file);
         }
         Commands::Upload {
