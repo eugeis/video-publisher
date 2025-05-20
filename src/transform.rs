@@ -24,7 +24,7 @@ pub(crate) fn transform_video(file: &str, encoding_passes: EncodingPasses) -> Re
         .arg("-show_entries")
         .arg("stream=width,height:format=duration") // Show width, height from stream, and duration from format
         .arg("-of")
-        .arg("default=noprint_wrappers=1:nokey=1") // Output in a clean, key-value format
+        .arg("default=noprint_wrappers=1:nokey=1") // Output in a clean, key-value format (values only, no keys)
         .arg(file)
         .output()
         .context("Failed to run FFprobe for metadata. Is ffprobe installed and in PATH?")?;
@@ -50,13 +50,13 @@ pub(crate) fn transform_video(file: &str, encoding_passes: EncodingPasses) -> Re
 
     // Common video encoding arguments for iOS compatibility
     // Store these as Strings because some will be formatted later
-    let common_video_args: Vec<String> = vec![ // Removed mut
-                                               "-c:v".into(), "libx264".into(),
-                                               "-profile:v".into(), "high".into(), // Crucial for broad iOS compatibility
-                                               "-level:v".into(), "4.2".into(),    // Crucial for broad iOS compatibility
-                                               "-pix_fmt".into(), "yuv420p".into(), // Crucial for broad iOS compatibility (8-bit, 4:2:0 subsampling)
-                                               "-preset".into(), preset.into(),
-                                               "-vf".into(), scale.into(), // Video filter for scaling
+    let common_video_args: Vec<String> = vec![
+        "-c:v".into(), "libx264".into(),
+        "-profile:v".into(), "high".into(), // Crucial for broad iOS compatibility
+        "-level:v".into(), "4.2".into(),    // Crucial for broad iOS compatibility
+        "-pix_fmt".into(), "yuv420p".into(), // Crucial for broad iOS compatibility (8-bit, 4:2:0 subsampling)
+        "-preset".into(), preset.into(),
+        "-vf".into(), scale.into(), // Video filter for scaling
     ];
 
     // Common audio encoding arguments
@@ -149,28 +149,19 @@ pub(crate) fn transform_video(file: &str, encoding_passes: EncodingPasses) -> Re
 // Adjusted parsing function for ffprobe output
 pub(crate) fn parse_ffprobe_output(output: &[u8]) -> Result<Metadata> {
     let stdout = String::from_utf8_lossy(output);
+    let mut lines = stdout.lines();
 
-    let mut width = 0;
-    let mut height = 0;
-    let mut duration = 0.0;
+    let width_str = lines.next().context("Missing width in ffprobe output")?;
+    let height_str = lines.next().context("Missing height in ffprobe output")?;
+    let duration_str = lines.next().context("Missing duration in ffprobe output")?;
 
-    // Parse output lines like:
-    // width=1920
-    // height=1080
-    // duration=123.456
-    for line in stdout.lines() {
-        if line.starts_with("width=") {
-            width = line.split("=").nth(1).unwrap_or("0").parse::<i32>().unwrap_or(0);
-        } else if line.starts_with("height=") {
-            height = line.split("=").nth(1).unwrap_or("0").parse::<i32>().unwrap_or(0);
-        } else if line.starts_with("duration=") {
-            duration = line.split("=").nth(1).unwrap_or("0.0").parse::<f64>().unwrap_or(0.0);
-        }
-    }
+    let width = width_str.parse::<i32>().context(format!("Failed to parse width: {}", width_str))?;
+    let height = height_str.parse::<i32>().context(format!("Failed to parse height: {}", height_str))?;
+    let duration = duration_str.parse::<f64>().context(format!("Failed to parse duration: {}", duration_str))?;
 
     // Basic validation to ensure metadata was parsed correctly
     if width == 0 || height == 0 || duration == 0.0 {
-        return Err(anyhow::anyhow!("Failed to parse width, height, or duration from ffprobe output. Output: {}", stdout));
+        return Err(anyhow::anyhow!("Parsed width, height, or duration is zero. Width: {}, Height: {}, Duration: {}. Full output: {}", width, height, duration, stdout));
     }
 
     Ok(Metadata {
