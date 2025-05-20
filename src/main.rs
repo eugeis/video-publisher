@@ -1,8 +1,7 @@
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 use youtube::download_video;
 use transform::transform_video;
 use anyhow::{Result};
-use std::str::FromStr;
 use crate::transform::EncodingPasses;
 
 mod youtube;
@@ -13,6 +12,13 @@ mod transform;
 mod bot;
 mod upload;
 mod process;
+
+#[derive(Copy, Clone, Debug, ValueEnum)]
+pub enum Platform {
+    Rutube,
+    Telegram,
+    Vk,
+}
 
 #[derive(Parser)]
 #[command(name = "youtube-to-platforms")]
@@ -36,7 +42,7 @@ enum Commands {
     },
     Upload {
         #[arg(short, long)]
-        platform: String,
+        platform: Platform,
         #[arg(short, long)]
         file: String,
         #[arg(short, long)]
@@ -58,7 +64,7 @@ enum Commands {
         #[arg(short, long)]
         url: String,
         #[arg(short, long)]
-        platform: String,
+        platform: Platform,
         #[arg(short, long, default_value = "./videos")]
         output: String,
         #[arg(long)]
@@ -82,7 +88,7 @@ enum Commands {
         #[arg(short, long)]
         bot_token: String,
         #[arg(short, long)]
-        platform: String,
+        platform: Platform,
         #[arg(short, long, default_value = "./videos")]
         output: String,
         #[arg(long)]
@@ -99,8 +105,8 @@ enum Commands {
         chat_id: Option<i64>,
         #[arg(short, long)]
         vk_access_token: Option<String>,
-        #[arg(short, long)]
-        allowed_users: String,
+        #[arg(short, long, value_delimiter = ',')]
+        allowed_users: Vec<u64>,
     },
 }
 
@@ -132,7 +138,7 @@ async fn main() -> Result<()> {
             chat_id,
             vk_access_token,
         } => {
-            upload::upload(&platform, &file, &title, rutube_api_key, &bot_api_url, max_file_size,
+            upload::upload(platform, &file, &title, rutube_api_key, &bot_api_url, max_file_size,
                            bot_token, chat_id, vk_access_token, "", "").await?;
         }
         Commands::Process {
@@ -148,7 +154,7 @@ async fn main() -> Result<()> {
             chat_id,
             vk_access_token,
         } => {
-            process::youtube(&url, &platform, &output, delete_youtube, delete_transformed,
+            process::youtube(&url, platform, &output, delete_youtube, delete_transformed,
                              rutube_api_key, &bot_api_url,
                              max_file_size, bot_token, chat_id, vk_access_token).await?;
         }
@@ -166,12 +172,9 @@ async fn main() -> Result<()> {
             allowed_users,
         } => {
             println!("Telegram bot...");
-            let allowed_users = allowed_users.split(',')
-                .filter_map(|s| u64::from_str(s.trim()).ok())
-                .collect();
 
             bot::run(&bot_token,
-                     &platform,
+                     platform,
                      &output,
                      delete_youtube,
                      delete_transformed,

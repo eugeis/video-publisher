@@ -5,6 +5,7 @@ use teloxide::dispatching::{Dispatcher, UpdateFilterExt};
 use teloxide::dptree::entry;
 use teloxide::requests::Requester;
 use crate::process;
+use crate::Platform;
 
 #[derive(BotCommands, Debug)]
 #[command(rename_rule = "lowercase", description = "These are the possible commands:")]
@@ -18,7 +19,7 @@ enum Command {
 // Shared configuration struct
 #[derive(Clone)]
 struct BotConfig {
-    platform: String,
+    platform: Platform,
     output: String,
     delete_youtube: bool,
     delete_transformed: bool,
@@ -32,7 +33,7 @@ struct BotConfig {
 }
 
 pub(crate) async fn run(bot_token: &str,
-                        platform: &str,
+                        platform: Platform,
                         output: &str,
                         delete_youtube: bool,
                         delete_transformed: bool,
@@ -50,7 +51,7 @@ pub(crate) async fn run(bot_token: &str,
     let bot = Bot::with_client(bot_token, client);
 
     let config = Arc::new(BotConfig {
-        platform: platform.to_string(),
+        platform,
         output: output.to_string(),
         delete_youtube,
         delete_transformed,
@@ -91,7 +92,7 @@ pub(crate) async fn run(bot_token: &str,
                 let cfg = config.clone();
                 if let Err(e) = process::youtube(
                     youtube_link, // Pass only the YouTube link
-                    &cfg.platform,
+                    cfg.platform,
                     &cfg.output,
                     cfg.delete_youtube,
                     cfg.delete_transformed,

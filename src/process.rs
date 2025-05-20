@@ -2,9 +2,10 @@ use std::fs;
 use crate::transform::{transform_video, EncodingPasses};
 use crate::upload;
 use crate::youtube::download_video;
+use crate::Platform;
 
 pub(crate) async fn youtube(
-    url: &str, platform: &str, output: &str,
+    url: &str, platform: Platform, output: &str,
     delete_youtube: bool, delete_transformed: bool, rutube_api_key: Option<String>,
     bot_api_url: &str, max_file_size: u64, bot_token: Option<String>,
     chat_id: Option<i64>, vk_access_token: Option<String>) -> anyhow::Result<()> {
