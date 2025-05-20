@@ -1,10 +1,8 @@
 use serde_json::Value;
 use anyhow::{Result, anyhow};
-use std::fs::File;
-use std::io::Read;
-use reqwest::blocking::{Client, multipart::Form}; // Import blocking Client and multipart::Form
+use reqwest::{Client, multipart::Form};
 
-pub fn upload_to_vk(access_token: &str, title: &str, file_path: &str) -> Result<()> {
+pub async fn upload_to_vk(access_token: &str, title: &str, file_path: &str) -> Result<()> {
     let client = Client::new();
 
     // Step 1: Get upload URL
@@ -15,18 +13,16 @@ pub fn upload_to_vk(access_token: &str, title: &str, file_path: &str) -> Result<
             ("v", "5.131"),
             ("name", title),
         ])
-        .send()?
-        .json::<Value>()?;
+        .send()
+        .await?
+        .json::<Value>()
+        .await?;
 
     let upload_url = res["response"]["upload_url"].as_str()
         .ok_or_else(|| anyhow!("Failed to get upload URL"))?
         .to_string();
 
     // Step 2: Upload video
-    let mut file = File::open(file_path)?;
-    let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer)?;
-
     // Create a multipart form with the video file
     let form = Form::new()
         .file("video_file", file_path)?;
@@ -34,13 +30,14 @@ pub fn upload_to_vk(access_token: &str, title: &str, file_path: &str) -> Result<
     // Step 3: Send video to the upload URL
     let upload_res = client.post(&upload_url)
         .multipart(form)
-        .send()?;
+        .send()
+        .await?;
 
     if !upload_res.status().is_success() {
         return Err(anyhow!("Failed to upload video to VK. Status: {}", upload_res.status()));
     }
 
-    let upload_response_text = upload_res.text()?;
+    let upload_response_text = upload_res.text().await?;
     println!("VK Upload Response: {}", upload_response_text);
 
     // Optionally, you can handle further steps like finalizing the upload on VK here.
