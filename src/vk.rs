@@ -25,7 +25,7 @@ pub async fn upload_to_vk(access_token: &str, title: &str, file_path: &str) -> R
     // Step 2: Upload video
     // Create a multipart form with the video file
     let form = Form::new()
-        .file("video_file", file_path)?;
+        .file("video_file", file_path).await?;
 
     // Step 3: Send video to the upload URL
     let upload_res = client.post(&upload_url)
